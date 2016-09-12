@@ -129,8 +129,8 @@
                 browserDetails.isWebRTCPluginInstalled = result.installed;
                 if (result.installed == true) {
                    browserDetails.WebRTCPluginVersion = result.version;
-                }
-                browserDetails.isSupportWebRTC = true;
+                   browserDetails.isSupportWebRTC = true;
+            }
             });
             ieShim.shimAttachEventListener(document, "readystatechange", function () {
                 console.log("onreadystatechange:" + document.readyState);
@@ -139,9 +139,9 @@
                     browserDetails.isWebRTCPluginInstalled = result.installed;
                     if (result.installed == true) {
                        browserDetails.WebRTCPluginVersion = result.version;
-                    }
-                    browserDetails.isSupportWebRTC = true;
+                       browserDetails.isSupportWebRTC = true;
                 }
+            }
             });
         }
         // Export to the adapter global object visible in the browser.
@@ -2288,6 +2288,9 @@ var ieShim = {
     installPlugin: function () {
         if (document.getElementById("IPVTPluginId")) {
             logging('Allready installed the plugin!');
+            window.browserDetails.isWebRTCPluginInstalled = true;
+            window.browserDetails.WebRTCPluginVersion = document.getElementById("IPVTPluginId").versionName;
+            window.browserDetails.isSupportWebRTC = true;
             return { installed: true, version: document.getElementById("IPVTPluginId").versionName };
         }
         //console.log("installPlugin() called");
@@ -2332,7 +2335,7 @@ var ieShim = {
                 } };
         }
 
-        if (pluginObj.isWebRtcPlugin || (typeof navigator.plugins !== "undefined" && (!!navigator.plugins["IPVideoTalk Plug-in"] || navigator.plugins["IPVideoTalk Plug-in for Safari"]))) {
+        if (pluginObj.isWebRtcPlugin || (typeof navigator.plugins !== "undefined" && (!!navigator.plugins["IPVideoTalk Plug-in for IE"] || navigator.plugins["IPVideoTalk Plug-in for Safari"]))) {
            // console.log("Plugin version: " + pluginObj.versionName + ", adapter version: 1.3.1");
             logging("Plugin version: " + pluginObj.versionName + ", adapter version: 1.0.4");
             if (isInternetExplorer) {
@@ -2357,9 +2360,16 @@ var ieShim = {
         //For telling the result of plugin installing  
         if ( pluginObj.versionName == undefined ) {
             logging("Plugin installing is failed !!");
+            window.browserDetails.isWebRTCPluginInstalled = false;
+            window.browserDetails.WebRTCPluginVersion = undefined;
+            window.browserDetails.isSupportWebRTC = false;
 
             return { installed: false, version: undefined };
         } 
+
+        window.browserDetails.isWebRTCPluginInstalled = true;
+        window.browserDetails.WebRTCPluginVersion = document.getElementById("IPVTPluginId").versionName;
+        window.browserDetails.isSupportWebRTC = true;
 
         return { installed: true, version: pluginObj.versionName };
 
@@ -2483,6 +2493,7 @@ var ieShim = {
              if (element.pluginObj) {
 
                 element.pluginObj.addEventListener('play', function(objvid) {
+                    logging("on play ~~~~~~");
                     if (element.pluginObj) {
                         if (element.pluginObj.getAttribute("autowidth") && objvid.videoWidth) {
                             element.pluginObj.setAttribute('width', objvid.videoWidth);
@@ -2494,9 +2505,9 @@ var ieShim = {
                 });
 
 
-                element.pluginObj.onplay = function(e) {
-                    logging("Object Event: play ~~~~~");
-                };
+                //element.pluginObj.onplay = function(e) {
+                //    logging("Object Event: play ~~~~~");
+                //};
 
                // element.pluginObj.addEventListener('playing', function(objvid) {
                //     logging("Objcet Event: playing" );
@@ -2531,9 +2542,9 @@ var ieShim = {
                 element.pluginObj.onloadeddata = function(e) {
                     logging("Object Event: loadeddata ~~~~~");
                 };
-                //element.pluginObj.onloadedmetadata = function(e) {
-                //    logging("Object Event: onloadedmetadata ~~~~~");
-                //};
+                element.pluginObj.onloadedmetadata = function(e) {
+                    logging("Object Event: onloadedmetadata ~~~~~");
+                };
                 element.pluginObj.oncanplay = function(e) {
                     logging("Object Event: canplay ~~~~~");
                 };

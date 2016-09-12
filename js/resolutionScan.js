@@ -70,8 +70,18 @@ $(document).ready(function(){
         quickText +=  " " + quickScan[q].label
     }
     $('#quickLabel').text(quickText);
-    //find & list camera devices on load
+
+  function getCameraList() {
+  console.log("getCameraList !!!!!!!");
+   if (adapter.browserDetails.isSupportWebRTC == true) {
+        //find & list camera devices on load
     navigator.mediaDevices.enumerateDevices().then(gotDevices).catch(errorCallback);
+   } else {
+       adapter.browserShim.shimInstallPlugin();
+       setTimeout(getCameraList, 300);
+   }
+  }
+   getCameraList();
     
 });
 
