@@ -2558,11 +2558,8 @@ var ieShim = {
 
                 // TODO: For adjust the video size synced with the original video element (rzhang)
 
-                 element.pluginObj.src = stream;
-                 //after setting src, hide video
-                 if(window.browserDetails.browser == 'ie'){
-                     element.pluginObj.style.display = "none";
-                 }
+                element.pluginObj.src = stream;
+                
                 logging("Plugin: Attaching media stream DONE !!!");
                 //window.setInterval(function(){  console.log("videoWidth :"+$('#video_remote')[0].videoWidth );  }, 500);
             }
