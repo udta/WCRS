@@ -77,7 +77,7 @@ $(document).ready(function(){
         //find & list camera devices on load
     navigator.mediaDevices.enumerateDevices().then(gotDevices).catch(errorCallback);
    } else {
-       adapter.browserShim.shimInstallPlugin();
+       adapter.browserShim.loadPlugin();
        setTimeout(getCameraList, 300);
    }
   }

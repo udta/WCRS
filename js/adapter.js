@@ -62,6 +62,8 @@
       browserDetails.isSupportORTC = false;
       break;
     case 'edge':
+      //The new edge have support WebRTC 1.0 (EdgeHTML 14.14915 / Edge 39.14915)
+      
       if (!edgeShim||!edgeShim.shimPeerConnection) {
         logging('MS edge shim is not included in this adapter release.');
         return;
@@ -70,9 +72,14 @@
       // Export to the adapter global object visible in the browser.
       module.exports.browserShim = edgeShim;
 
-      edgeShim.shimPeerConnection();
       window.attachMediaStream = edgeShim.attachMediaStream;
-      browserDetails.isSupportWebRTC = false;
+      if (RTCPeerConnection != undefined) {
+          browserDetails.isSupportWebRTC = true;
+          edgeShim.shimPeerConnection();
+      } else {
+          browserDetails.isSupportWebRTC = false;
+          edgeShim.shimPeerConnection();
+      }
       browserDetails.isSupportORTC = true;
       break;
     case 'firefox':
@@ -113,35 +120,19 @@
         browserDetails.WebRTCPluginVersion = undefined;
 
         if (document.body) {
-            result = ieShim.shimInstallPlugin();
-
-            browserDetails.isWebRTCPluginInstalled = result.installed;
-            if (result.installed == true) {
-                browserDetails.WebRTCPluginVersion = result.version;
-                browserDetails.isSupportWebRTC = true;
+            ieShim.loadPlugin();
             }
-
-        }
         else {
             ieShim.shimAttachEventListener(window, "load", function () {
-                console.log("onload");
-                result = ieShim.shimInstallPlugin();
-                browserDetails.isWebRTCPluginInstalled = result.installed;
-                if (result.installed == true) {
-                   browserDetails.WebRTCPluginVersion = result.version;
-                   browserDetails.isSupportWebRTC = true;
-            }
+                logging('on window load : adapter to load plugin~~');
+                ieShim.loadPlugin();
             });
             ieShim.shimAttachEventListener(document, "readystatechange", function () {
+                logging('onreadystatechange : adapter to load plugin~~');
                 console.log("onreadystatechange:" + document.readyState);
                 if (document.readyState == "complete") {
-                    result = ieShim.shimInstallPlugin();
-                    browserDetails.isWebRTCPluginInstalled = result.installed;
-                    if (result.installed == true) {
-                       browserDetails.WebRTCPluginVersion = result.version;
-                       browserDetails.isSupportWebRTC = true;
+                    ieShim.loadPlugin();
                 }
-            }
             });
         }
         // Export to the adapter global object visible in the browser.
@@ -499,6 +490,7 @@ var chromeShim = {
     logging('DEPRECATED, attachMediaStream will soon be removed.');
     if (browserDetails.version >= 43||typeof element.src !== 'undefined') {
       element.src = URL.createObjectURL(stream);
+      logging("attachMediaStream  src: " + element.src );
     } else {
       logging('Error attaching stream to element.');
     }
@@ -1816,6 +1808,7 @@ var edgeShim = {
   attachMediaStream: function(element, stream) {
     logging('DEPRECATED, attachMediaStream will soon be removed.');
     element.src = URL.createObjectURL(stream);
+    logging("attachMediaStream  src: " + element.src );
   },
 
   reattachMediaStream: function(to, from) {
@@ -2047,6 +2040,7 @@ var firefoxShim = {
   attachMediaStream: function(element, stream) {
     logging('DEPRECATED, attachMediaStream will soon be removed.');
     element.src = URL.createObjectURL(stream);
+    logging("attachMediaStream  src: " + element.src );
   },
 
   reattachMediaStream: function(to, from) {
@@ -2230,6 +2224,7 @@ var getUserMediaDelayed;
 var getSourcesDelayed;
 var webrtcDetectedBrowser = null;
 var webrtcDetectedVersion = null;
+var loadCount = 10;
 var getPlugin = function () {
         return document.getElementById('IPVTPluginId');
 };
@@ -2255,45 +2250,24 @@ var getSources = function (gotSources) { // not part of the standard (at least, 
     }
 };
 
-
-var ieShim = {
-
-  shimCreateIceServer: function (url, username, password) {
-        var url_parts = url.split(':');
-        if (url_parts[0].indexOf('stun') === 0) {
-            return { 'url': url };
-        } else if (url_parts[0].indexOf('turn') === 0) {
-            return {
-                'url': url,
-                'credential': password,
-                'username': username
-            };
-        }
-        return null;
-    },
-    attachEventListener: function (elt, type, listener, useCapture) {
-        var _pluginObj = extractPluginObj(elt);
-        if (_pluginObj) {
-            _pluginObj.bindEventListener(type, listener, useCapture);
-        }
-        else {
-            if (typeof elt.addEventListener !== "undefined") {
-                elt.addEventListener(type, listener, useCapture);
-            }
-            else if (typeof elt.addEvent !== "undefined") {
-                elt.addEventListener("on" + type, listener, useCapture);
-            }
-        }
-    },
-    installPlugin: function () {
+var installPlugin = function () {
         if (document.getElementById("IPVTPluginId")) {
-            logging('Allready installed the plugin!');
-            window.browserDetails.isWebRTCPluginInstalled = true;
-            window.browserDetails.WebRTCPluginVersion = document.getElementById("IPVTPluginId").versionName;
-            window.browserDetails.isSupportWebRTC = true;
+        if (document.getElementById("IPVTPluginId").versionName != undefined) {
+            logging('Allready installed the plugin!! Plugin version is '+document.getElementById("IPVTPluginId").versionName);
             return { installed: true, version: document.getElementById("IPVTPluginId").versionName };
+        } else {
+                logging('Waitting for the Plugin installation done');
+                return { installed: false, version: undefined };
+           }
         }
-        //console.log("installPlugin() called");
+
+       // Returns the result of getUserMedia as a Promise.
+        var getUserMediaPromise_ = function(constraints) {
+            return new Promise(function(resolve, reject) {
+                    getPlugin().getUserMedia(constraints, resolve, reject);
+                });
+        }
+        
         logging('installPlugin() called');
         var isInternetExplorer = !!((Object.getOwnPropertyDescriptor && Object.getOwnPropertyDescriptor(window, "ActiveXObject")) || ("ActiveXObject" in window));
         var isSafari = !!navigator.userAgent.indexOf('Safari');
@@ -2310,18 +2284,11 @@ var ieShim = {
         pluginObj.setAttribute('width', '0');
         pluginObj.setAttribute('height', '0');
 
-        // Returns the result of getUserMedia as a Promise.
-        var getUserMediaPromise_ = function(constraints) {
-            return new Promise(function(resolve, reject) {
-                    getPlugin().getUserMedia(constraints, resolve, reject);
-                });
-        }
-
         //For export the mediaDevices
         if (!navigator.mediaDevices) {
             navigator.mediaDevices = { getUserMedia: getUserMediaPromise_,
-                enumerateDevices: function(resolve, error) {
-                    return new Promise(function(resolve, error) {
+                enumerateDevices: function() {
+                    return new Promise(function(resolve) {
                             var kinds = { audio: 'audioinput', video: 'videoinput' };
                             return getSources(function(devices) {
                                     resolve(devices.map(function(device) {
@@ -2337,7 +2304,8 @@ var ieShim = {
 
         if (pluginObj.isWebRtcPlugin || (typeof navigator.plugins !== "undefined" && (!!navigator.plugins["IPVideoTalk Plug-in for IE"] || navigator.plugins["IPVideoTalk Plug-in for Safari"]))) {
            // console.log("Plugin version: " + pluginObj.versionName + ", adapter version: 1.3.1");
-            logging("Plugin version: " + pluginObj.versionName + ", adapter version: 1.0.4");
+            //logging("Plugin version: " + pluginObj.versionName + ", adapter version: 1.0.4");
+            logging("adapter version: 1.0.4, Start to load the Plugin!!");
             if (isInternetExplorer) {
                 //console.log("This appears to be Internet Explorer");
                 logging("This appears to be Internet Explorer");
@@ -2359,40 +2327,72 @@ var ieShim = {
 
         //For telling the result of plugin installing  
         if ( pluginObj.versionName == undefined ) {
-            logging("Plugin installing is failed !!");
-            window.browserDetails.isWebRTCPluginInstalled = false;
-            window.browserDetails.WebRTCPluginVersion = undefined;
-            window.browserDetails.isSupportWebRTC = false;
+            logging("Plugin installing is not finished");
 
             return { installed: false, version: undefined };
         } 
 
-        window.browserDetails.isWebRTCPluginInstalled = true;
-        window.browserDetails.WebRTCPluginVersion = document.getElementById("IPVTPluginId").versionName;
-        window.browserDetails.isSupportWebRTC = true;
+        logging("Plugin installation is successful !! version is "+pluginObj.versionName);
 
         return { installed: true, version: pluginObj.versionName };
 
-    }, // end-of-installPlugin()
-/*
-    if (document.body) {
-        installPlugin();
-    }
+    };
+
+
+var ieShim = {
+
+  shimCreateIceServer: function (url, username, password) {
+        var url_parts = url.split(':');
+        if (url_parts[0].indexOf('stun') === 0) {
+            return { 'url': url };
+        }
+    else if (url_parts[0].indexOf('turn') === 0) {
+            return {
+                'url': url,
+                'credential': password,
+                'username': username
+            };
+        }
+        return null;
+
+    },
+    attachEventListener: function (elt, type, listener, useCapture) {
+        var _pluginObj = extractPluginObj(elt);
+        if (_pluginObj) {
+            _pluginObj.bindEventListener(type, listener, useCapture);
+        }
     else {
-        attachEventListener(window, "load", function () {
-            //console.log("onload");
-            logging("onload");
-            installPlugin();
-        });
-        attachEventListener(document, "readystatechange", function () {
-            //console.log("onreadystatechange:" + document.readyState);
-            logging("onreadystatechange:" + document.readyState);
-            if (document.readyState == "complete") {
-                installPlugin();
+            if (typeof elt.addEventListener !== "undefined") {
+                elt.addEventListener(type, listener, useCapture);
             }
-        });
-    }
-*/
+            else if (typeof elt.addEvent !== "undefined") {
+                elt.addEventListener("on" + type, listener, useCapture);
+            }
+        }
+    },
+    loadPlugin:  function() {
+        logging("loadPlugin !!!!!!!");
+        if (browserDetails.WebRTCPluginVersion != undefined) {
+            return;
+        } else {
+            loadCount--;
+            var result = installPlugin();
+
+            browserDetails.isWebRTCPluginInstalled = result.installed;
+            if (result.installed == true) {
+                browserDetails.WebRTCPluginVersion = result.version;
+                browserDetails.isSupportWebRTC = true;
+            } else if (loadCount <= 0) {
+                /*Install Plugin failed !!!*/
+                browserDetails.WebRTCPluginVersion = null;
+                browserDetails.isSupportWebRTC = false;
+                return;
+            }
+
+            setTimeout(this.loadPlugin, 300);
+        }
+    },
+
     shimGetUserMedia: function (constraints, successCallback, errorCallback) {
         if (document.readyState !== "complete") {
             logging("readyState = " + document.readyState + ", delaying getUserMedia...");
@@ -2493,7 +2493,6 @@ var ieShim = {
              if (element.pluginObj) {
 
                 element.pluginObj.addEventListener('play', function(objvid) {
-                    logging("on play ~~~~~~");
                     if (element.pluginObj) {
                         if (element.pluginObj.getAttribute("autowidth") && objvid.videoWidth) {
                             element.pluginObj.setAttribute('width', objvid.videoWidth);
@@ -2560,6 +2559,10 @@ var ieShim = {
                 // TODO: For adjust the video size synced with the original video element (rzhang)
 
                  element.pluginObj.src = stream;
+                 //after setting src, hide video
+                 if(window.browserDetails.browser == 'ie'){
+                     element.pluginObj.style.display = "none";
+                 }
                 logging("Plugin: Attaching media stream DONE !!!");
                 //window.setInterval(function(){  console.log("videoWidth :"+$('#video_remote')[0].videoWidth );  }, 500);
             }
@@ -2724,9 +2727,10 @@ module.exports = {
   attachMediaStream: ieShim.attachMediaStream,
   shimRTCIceCandidate: ieShim.shimRTCIceCandidate,
   shimRTCSessionDescription: ieShim.shimRTCSessionDescription,
-  shimInstallPlugin: ieShim.installPlugin,
+  //shimInstallPlugin: ieShim.installPlugin,
   shimAttachEventListener: ieShim.attachEventListener,
-  loadWindows: ieShim.shimLoadWindows
+  loadWindows: ieShim.shimLoadWindows,
+  loadPlugin: ieShim.loadPlugin
  //reattachMediaStream: ieShim.reattachMediaStream
 };
 
