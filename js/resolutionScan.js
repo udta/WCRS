@@ -396,6 +396,12 @@ var quickScan = [
         "ratio": "4:3"
     },
     {
+        "label": "180p?",
+        "width": 320,
+        "height": 180,
+        "ratio": "16:9"
+    },
+    {
         "label": "QCIF",
         "width": 176,
         "height": 144,
