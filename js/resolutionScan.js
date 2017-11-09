@@ -170,8 +170,9 @@ function gum(candidate, device) {
             video: {
                     deviceId: device.id ? {exact: device.id} : undefined,
                     width: {exact: candidate.width},    //new syntax
-                    height: {exact: candidate.height}   //new syntax
-            }
+                    height: {exact: candidate.height},   //new syntax
+                    frameRate: { exact: candidate.frameRate }
+                   }
         };
     } else {
         constraints = {
@@ -181,7 +182,9 @@ function gum(candidate, device) {
                         minWidth: candidate.width*0.8,
                         minHeight: candidate.height*0.8,
                         maxWidth: candidate.width*1.2,
-                        maxHeight: candidate.height*1.2
+                        maxHeight: candidate.height*1.2,
+                        minFrameRate: candidate.frameRate * 0.8,
+                        maxFrameRate: candidate.frameRate * 1.2
                     },
                     deviceId: device.id
             }
@@ -201,6 +204,7 @@ function gum(candidate, device) {
            
             window.stream.getVideoTracks()[0].applyConstraints({width: {ideal: candidate.width, max:candidate.width},
                                                             height: {ideal: candidate.height, max:candidate.height},
+                                                            frameRate: { ideal: candidate.frameRate, max: candidate.frameRate },
                                                            aspectRatio: {exact: candidate.width/candidate.height}}).then( function(){
                 setTimeout(displayVideoDimensions, 900);
             });
@@ -268,9 +272,10 @@ function captureResults(status){
     var ratio = row.insertCell(3);
     var ask = row.insertCell(4);
     var actual = row.insertCell(5);
-    var statusCell = row.insertCell(6);
-    var deviceIndex = row.insertCell(7);
-    var resIndex = row.insertCell(8);
+    var frameRate = row.insertCell(6); 
+    var statusCell = row.insertCell(7);
+    var deviceIndex = row.insertCell(8);
+    var resIndex = row.insertCell(9);
 
     //don't show these
     deviceIndex.style.display="none";
@@ -285,6 +290,7 @@ function captureResults(status){
     ratio.innerHTML = tests[r].ratio;
     ask.innerHTML = tests[r].width + "x" + tests[r].height;
     actual.innerHTML = tests[r].streamWidth+ "x" + tests[r].streamHeight;
+    frameRate.innerHTML = tests[r].frameRate;
     statusCell.innerHTML = tests[r].status;
     deviceIndex.innerHTML = camNum;     //used for debugging
     resIndex.innerHTML = r;             //used for debugging
@@ -343,57 +349,136 @@ function clickRows(){
 var quickScan = [
     {
         "label": "4K(UHD)",
+        "width": 3840,
+        "height": 2160,
+        "ratio": "16:9",
+        "frameRate": 30
+    }, 
+    {
+        "label": "4K(UHD)",
         "width" : 3840,
         "height": 2160,
-        "ratio": "16:9"
+        "ratio": "16:9",
+        "frameRate": 15
     },
     {
         "label": "1080p(FHD)",
         "width": 1920,
         "height": 1080,
-        "ratio": "16:9"
+        "ratio": "16:9",
+        "frameRate": 30
+    }, 
+    {
+        "label": "1080p(FHD)",
+        "width": 1920,
+        "height": 1080,
+        "ratio": "16:9",
+        "frameRate": 15
     },
     {
         "label": "UXGA",
         "width": 1600,
         "height": 1200,
-        "ratio": "4:3"
+        "ratio": "4:3",
+        "frameRate": 30
+    },
+    {
+        "label": "UXGA",
+        "width": 1600,
+        "height": 1200,
+        "ratio": "4:3",
+        "frameRate": 15
     },
     {
         "label": "720p(HD)",
         "width": 1280,
         "height": 720,
-        "ratio": "16:9"
+        "ratio": "16:9",
+        "frameRate": 30
+    },
+    {
+        "label": "720p(HD)",
+        "width": 1280,
+        "height": 720,
+        "ratio": "16:9",
+        "frameRate": 15
     },
     {
         "label": "SVGA",
         "width": 800,
         "height": 600,
-        "ratio": "4:3"
+        "ratio": "4:3",
+        "frameRate": 30
+    },
+    {
+        "label": "SVGA",
+        "width": 800,
+        "height": 600,
+        "ratio": "4:3",
+        "frameRate": 15
     },
     {
         "label": "VGA",
         "width": 640,
         "height": 480,
-        "ratio": "4:3"
+        "ratio": "4:3",
+        "frameRate": 30
+    }, 
+    {
+        "label": "VGA",
+        "width": 640,
+        "height": 480,
+        "ratio": "4:3",
+        "frameRate": 15
     },
     {
         "label": "360p(nHD)",
         "width": 640,
         "height": 360,
-        "ratio": "16:9"
+        "ratio": "16:9",
+        "frameRate": 30
+    }, 
+    {
+        "label": "360p(nHD)",
+        "width": 640,
+        "height": 360,
+        "ratio": "16:9",
+        "frameRate": 15
     },
     {
         "label": "CIF",
         "width": 352,
         "height": 288,
-        "ratio": "4:3"
+        "ratio": "4:3",
+        "frameRate": 30
+    },
+    {
+        "label": "CIF",
+        "width": 352,
+        "height": 288,
+        "ratio": "4:3",
+        "frameRate": 15
     },
     {
         "label": "QVGA",
         "width": 320,
         "height": 240,
-        "ratio": "4:3"
+        "ratio": "4:3",
+        "frameRate": 30
+    },
+    {
+        "label": "QVGA",
+        "width": 320,
+        "height": 240,
+        "ratio": "4:3",
+        "frameRate": 15
+    },
+    {
+        "label": "QCIF",
+        "width": 176,
+        "height": 144,
+        "ratio": "4:3",
+        "frameRate": 30
     },
     {
         "label": "180p?",
@@ -405,13 +490,22 @@ var quickScan = [
         "label": "QCIF",
         "width": 176,
         "height": 144,
-        "ratio": "4:3"
+        "ratio": "4:3",
+        "frameRate": 15
     },
     {
         "label": "QQVGA",
         "width": 160,
         "height": 120,
-        "ratio": "4:3"
+        "ratio": "4:3",
+        "frameRate": 30
+    },
+    {
+        "label": "QQVGA",
+        "width": 160,
+        "height": 120,
+        "ratio": "4:3",
+        "frameRate": 15
     }
 
 ];
