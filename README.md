@@ -20,7 +20,7 @@ What's new:
 * added some links to more easily jump around the table
 * made sure it works with Chrome, Firefox, and Edge
  
-Try it at https://webrtchacks.github.io/WebRTC-Camera-Resolution/
+Try it at https://udta.github.io/WCRS
 
 Read more at https://webrtchacks.com/getusermedia-resolutions-3/
  
